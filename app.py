@@ -4,10 +4,10 @@ import requests
 st.set_page_config(page_title="B.O. Zastosowanie sztucznych sieci neuronowych", layout="centered")
 st.title("B.O. Zastosowanie sztucznych sieci neuronowych")
 
-# 🔐 Klucz API z secrets
+# 🔐 Klucz API
 api_key = st.secrets["OPENROUTER_API_KEY"]
 
-# 📦 Lista modeli dostępnych w OpenRouter
+# 📦 Dostępne modele
 MODELE = {
     "GPT-3.5 Turbo": "openai/gpt-3.5-turbo",
     "GPT-4 Turbo": "openai/gpt-4-turbo",
@@ -30,28 +30,23 @@ if styl == "Precyzyjny":
 else:
     prompt_systemowy = "Odpowiadasz kreatywnie, z humorem i wyobraźnią – jak inspirujący doradca."
 
-# 🧠 Klucz do historii i suwaka tokenów dla danego modelu
+# 🔑 Klucze sesji
 klucz_historia = f"messages_{model_alias}"
 klucz_tokeny = f"max_tokens_{model_alias}"
 
-# 📥 Inicjalizacja historii i tokenów dla danego modelu
+# 🧠 Inicjalizacja
 if klucz_historia not in st.session_state:
     st.session_state[klucz_historia] = [{"role": "system", "content": prompt_systemowy}]
-
 if klucz_tokeny not in st.session_state:
-    st.session_state[klucz_tokeny] = 1024  # domyślny limit tokenów
+    st.session_state[klucz_tokeny] = 1024  # domyślnie
 
-# 📝 Pole tekstowe na zapytanie
+# 📝 Pole tekstowe
 prompt = st.text_area("Wprowadź swoje polecenie:", "")
 
-# 🚀 Przycisk wysyłania zapytania
+# 🚀 Przycisk wysyłania
 if st.button("Wyślij"):
     if prompt.strip():
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-        }
-
-        # ➕ Dodaj wiadomość użytkownika do historii
+        headers = {"Authorization": f"Bearer {api_key}"}
         st.session_state[klucz_historia].append({"role": "user", "content": prompt})
 
         data = {
@@ -60,12 +55,7 @@ if st.button("Wyślij"):
             "max_tokens": st.session_state[klucz_tokeny]
         }
 
-        response = requests.post(
-            "https://openrouter.ai/api/v1/chat/completions",
-            headers=headers,
-            json=data
-        )
-
+        response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=data)
         response_data = response.json()
 
         if "choices" in response_data and "message" in response_data["choices"][0]:
@@ -78,10 +68,9 @@ if st.button("Wyślij"):
             st.error("Nieoczekiwana odpowiedź od modelu:")
             st.code(response_data)
 
-        # 📊 Licznik tokenów i kosztów
+        # 📊 Tokeny i koszt
         if "usage" in response_data:
             tokens = response_data["usage"]["total_tokens"]
-
             ceny = {
                 "openai/gpt-3.5-turbo": 0.001,
                 "openai/gpt-4-turbo": 0.01,
@@ -90,32 +79,36 @@ if st.button("Wyślij"):
                 "mistralai/mistral-7b-instruct": 0.0005,
                 "meta-llama/llama-3-8b-instruct": 0.0005
             }
-
             cena_tokena = ceny.get(model_alias, 0.001)
             koszt = tokens * cena_tokena / 1000
             st.info(f"Zużyto {tokens} tokenów. Szacowany koszt: ${koszt:.4f}")
 
-# 🧼 Suwak max_tokens dla danego modelu (nad historią)
+# 🧠 Suwak i przycisk do restartu sesji
 st.markdown("---")
 st.subheader("Historia rozmowy")
 
-st.session_state[klucz_tokeny] = st.slider(
+nowa_liczba = st.slider(
     "Maksymalna długość odpowiedzi (tokeny):",
     min_value=128,
     max_value=4096,
     value=st.session_state[klucz_tokeny],
     step=64,
-    key=klucz_tokeny
+    key="temp_token_slider"
 )
 
-# 📚 Wyświetlenie historii rozmowy
+if st.button("🔄 Rozpocznij nową sesję z tą wartością"):
+    st.session_state[klucz_tokeny] = nowa_liczba
+    st.session_state[klucz_historia] = [{"role": "system", "content": prompt_systemowy}]
+    st.success(f"Nowa sesja rozpoczęta z max_tokens = {nowa_liczba}")
+
+# 📚 Historia
 for msg in st.session_state[klucz_historia]:
     if msg["role"] == "user":
         st.markdown(f"**Ty:** {msg['content']}")
     elif msg["role"] == "assistant":
         st.markdown(f"**Asystent:** {msg['content']}")
 
-# 🔘 Przycisk czyszczenia historii dla danego modelu
+# 🧹 Czyszczenie historii
 if st.button("🧹 Wyczyść historię tego modelu"):
     st.session_state[klucz_historia] = [{"role": "system", "content": prompt_systemowy}]
     st.success("Historia została wyczyszczona.")
