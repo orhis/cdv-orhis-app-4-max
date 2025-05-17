@@ -1,30 +1,24 @@
 import streamlit as st
 import requests
-import os
 
-# Próba zaimportowania dotenv — jeśli nie działa, instalujemy w locie (działa na Streamlit Cloud)
-try:
-    from dotenv import load_dotenv
-except ImportError:
-    os.system("pip install python-dotenv")
-    from dotenv import load_dotenv
-
-# Wczytanie zmiennych środowiskowych
-load_dotenv()
-
-# Interfejs aplikacji
 st.title("Asystent AI – powered by OpenRouter")
+
+# Pobierz klucz API z bezpiecznego magazynu Streamlit (Secrets)
+api_key = st.secrets["OPENROUTER_API_KEY"]
 
 prompt = st.text_area("Wprowadź swoje polecenie:", "")
 
 if st.button("Wyślij"):
     if prompt.strip():
         headers = {
-            "Authorization": f"Bearer {os.getenv('OPENROUTER_API_KEY')}",
+            "Authorization": f"Bearer {api_key}",
         }
         data = {
             "model": "openai/gpt-3.5-turbo",
-            "messages": [{"role": "user", "content": prompt}]
+            "messages": [
+                {"role": "system", "content": "Jesteś pomocnym asystentem AI, który mówi po polsku."},
+                {"role": "user", "content": prompt}
+            ]
         }
 
         response = requests.post(
