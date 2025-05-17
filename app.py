@@ -4,7 +4,7 @@ import requests
 # Tytuł aplikacji
 st.title("Asystent AI – powered by OpenRouter")
 
-# 📌 Klucz API z bezpiecznego magazynu Streamlit Cloud (lub lokalnie przez st.secrets.toml)
+# 🔐 Klucz API z sekcji secrets (działa w Streamlit Cloud i lokalnie z secrets.toml)
 api_key = st.secrets["OPENROUTER_API_KEY"]
 
 # 📦 Lista modeli dostępnych w OpenRouter
@@ -21,7 +21,7 @@ MODELE = {
 nazwa_modelu = st.selectbox("Wybierz model:", list(MODELE.keys()))
 model_alias = MODELE[nazwa_modelu]
 
-# 🎭 Wybór stylu odpowiedzi
+# 🎭 Styl odpowiedzi
 styl = st.radio("Styl odpowiedzi:", ["Precyzyjny", "Kreatywny"])
 
 # 🧠 Prompt systemowy zależny od stylu
@@ -54,8 +54,17 @@ if st.button("Wyślij"):
             json=data
         )
 
-        if response.ok:
-            reply = response.json()["choices"][0]["message"]["content"]
+        response_data = response.json()
+
+        # ✅ Obsługa różnych formatów odpowiedzi (GPT/Claude/Mistral)
+        if "choices" in response_data and "message" in response_data["choices"][0]:
+            reply = response_data["choices"][0]["message"]["content"]
             st.success(reply)
+
+        elif "choices" in response_data and "text" in response_data["choices"][0]:
+            reply = response_data["choices"][0]["text"]
+            st.success(reply)
+
         else:
-            st.error(f"Błąd: {response.status_code} - {response.text}")
+            st.error("Nieoczekiwana odpowiedź od modelu:")
+            st.code(response_data)
