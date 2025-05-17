@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 
 st.set_page_config(page_title="B.O. Zastosowanie sztucznych sieci neuronowych", layout="centered")
-st.title("Asystent AI – powered by OpenRouter")
+st.title("B.O. Zastosowanie sztucznych sieci neuronowych")
 
 # 🔐 Klucz API z secrets (działa lokalnie z secrets.toml i w Streamlit Cloud)
 api_key = st.secrets["OPENROUTER_API_KEY"]
