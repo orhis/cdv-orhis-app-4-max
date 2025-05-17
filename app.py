@@ -1,7 +1,7 @@
 import streamlit as st
 import requests
 
-st.title("Zastosowanie sztucznych sieci neuronowych, Laboratoria, grupa 1")
+st.title("B.O. Zastosowanie sztucznych sieci neuronowych.")
 
 # Pobierz klucz API z bezpiecznego magazynu Streamlit (Secrets)
 api_key = st.secrets["OPENROUTER_API_KEY"]
