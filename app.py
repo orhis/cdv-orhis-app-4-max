@@ -44,7 +44,14 @@ with col2:
     st.caption(f"🎯 Aktualnie: {st.session_state[klucz_tokeny]}")
 
 with col3:
-    nowa_liczba = st.slider("", 128, 4096, st.session_state[klucz_tokeny], 64, key="temp_token_slider")
+    nowa_liczba = st.slider(
+        "Ukryty suwak (dla dostępności)",
+        128, 4096,
+        st.session_state[klucz_tokeny],
+        64,
+        key="temp_token_slider",
+        label_visibility="collapsed"
+    )
 
 with col4:
     if st.button("🔄 Nowa sesja"):
@@ -54,8 +61,14 @@ with col4:
 
 # === 4. FORMULARZ ZAPYTANIA I OBSŁUGA API ===
 col_prompt, col_send = st.columns([5, 1])
+
 with col_prompt:
-    prompt = st.text_area("Wprowadź swoje polecenie:", label_visibility="collapsed")
+    prompt = st.text_area(
+        "Ukryte pole tekstowe (dla dostępności)",
+        "",
+        label_visibility="collapsed"
+    )
+
 with col_send:
     if st.button("Wyślij"):
         if prompt.strip():
