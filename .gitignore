@@ -1,11 +1,28 @@
+# === Środowisko Pythona ===
 venv/
-.env
 __pycache__/
-*.pyc
-*.pyo
+*.py[cod]
 *.pyd
+*.so
+
+# === Pliki konfiguracyjne z danymi lokalnymi ===
+.env
+
+# Ignoruj wszystko w .streamlit/, ale śledź config.toml
+.streamlit/*
+!.streamlit/config.toml
+
+# === Bazy danych (lokalne lub testowe) ===
 *.db
 *.sqlite3
+
+# === Systemowe i edytory ===
 .DS_Store
 .idea/
 .vscode/
+
+# === Pliki tymczasowe / cache / logi ===
+*.log
+*.bak
+*.tmp
+*.swp
