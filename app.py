@@ -1,22 +1,49 @@
 import streamlit as st
 import requests
 
-st.title("B.O. Zastosowanie sztucznych sieci neuronowych.")
+# Tytuł aplikacji
+st.title("Asystent AI – powered by OpenRouter")
 
-# Pobierz klucz API z bezpiecznego magazynu Streamlit (Secrets)
+# 📌 Klucz API z bezpiecznego magazynu Streamlit Cloud (lub lokalnie przez st.secrets.toml)
 api_key = st.secrets["OPENROUTER_API_KEY"]
 
+# 📦 Lista modeli dostępnych w OpenRouter
+MODELE = {
+    "GPT-3.5 Turbo": "openai/gpt-3.5-turbo",
+    "GPT-4 Turbo": "openai/gpt-4-turbo",
+    "Claude 3 Opus": "anthropic/claude-3-opus",
+    "Claude 3 Sonnet": "anthropic/claude-3-sonnet",
+    "Mistral 7B": "mistralai/mistral-7b-instruct",
+    "LLaMA 3 8B": "meta-llama/llama-3-8b-instruct"
+}
+
+# 🔽 Wybór modelu
+nazwa_modelu = st.selectbox("Wybierz model:", list(MODELE.keys()))
+model_alias = MODELE[nazwa_modelu]
+
+# 🎭 Wybór stylu odpowiedzi
+styl = st.radio("Styl odpowiedzi:", ["Precyzyjny", "Kreatywny"])
+
+# 🧠 Prompt systemowy zależny od stylu
+if styl == "Precyzyjny":
+    prompt_systemowy = "Odpowiadasz rzeczowo i konkretnie, jak profesjonalny asystent AI."
+else:
+    prompt_systemowy = "Odpowiadasz kreatywnie, z humorem i wyobraźnią – jak inspirujący doradca."
+
+# 📝 Pole tekstowe na zapytanie
 prompt = st.text_area("Wprowadź swoje polecenie:", "")
 
+# 🚀 Przycisk wysyłania zapytania
 if st.button("Wyślij"):
     if prompt.strip():
         headers = {
             "Authorization": f"Bearer {api_key}",
         }
+
         data = {
-            "model": "openai/gpt-3.5-turbo",
+            "model": model_alias,
             "messages": [
-                {"role": "system", "content": "Jesteś pomocnym asystentem AI, który mówi po polsku."},
+                {"role": "system", "content": prompt_systemowy},
                 {"role": "user", "content": prompt}
             ]
         }
