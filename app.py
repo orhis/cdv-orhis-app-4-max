@@ -45,7 +45,8 @@ if st.button("Wyślij"):
             "messages": [
                 {"role": "system", "content": prompt_systemowy},
                 {"role": "user", "content": prompt}
-            ]
+            ],
+            "max_tokens": 512
         }
 
         response = requests.post(
