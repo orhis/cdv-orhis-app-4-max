@@ -1,7 +1,13 @@
 import streamlit as st
 import requests
 import os
-from dotenv import load_dotenv
+
+# Próba zaimportowania dotenv — jeśli nie działa, instalujemy w locie (działa na Streamlit Cloud)
+try:
+    from dotenv import load_dotenv
+except ImportError:
+    os.system("pip install python-dotenv")
+    from dotenv import load_dotenv
 
 # Wczytanie zmiennych środowiskowych
 load_dotenv()
