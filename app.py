@@ -17,6 +17,15 @@ MODELE = {
     "LLaMA 3 8B": "meta-llama/llama-3-8b-instruct"
 }
 
+MAKSYMALNE_TOKENS = {
+    "openai/gpt-3.5-turbo": 4096,
+    "openai/gpt-4-turbo": 4096,  # lub 128000, ale 4096 stabilne
+    "anthropic/claude-3-opus": 8000,
+    "anthropic/claude-3-sonnet": 8000,
+    "mistralai/mistral-7b-instruct": 8192,
+    "meta-llama/llama-3-8b-instruct": 8192
+}
+
 nazwa_modelu = st.selectbox("Wybierz model:", list(MODELE.keys()))
 model_alias = MODELE[nazwa_modelu]
 
@@ -27,6 +36,7 @@ if klucz_historia not in st.session_state:
     st.session_state[klucz_historia] = [{"role": "system", "content": "Jesteś pomocnym asystentem AI, który mówi po polsku."}]
 if klucz_tokeny not in st.session_state:
     st.session_state[klucz_tokeny] = 1024
+
 
 # === 3. PANEL KONTROLNY (STYL / TOKENY / NOWA SESJA) ===
 col1, col2, col3, col4 = st.columns([2, 2, 4, 2])
@@ -44,9 +54,11 @@ with col2:
     st.caption(f"🎯 Aktualnie: {st.session_state[klucz_tokeny]}")
 
 with col3:
+    limit_tokenow = MAKSYMALNE_TOKENS.get(model_alias, 4096)
     nowa_liczba = st.slider(
         "Ukryty suwak (dla dostępności)",
-        128, 4096,
+        128,
+        limit_tokenow,
         st.session_state[klucz_tokeny],
         64,
         key="temp_token_slider",
