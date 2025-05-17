@@ -123,18 +123,22 @@ with col_send:
 # === 5. WIDOK HISTORII ROZMOWY ===
 st.markdown("---")
 col_hist, col_btn = st.columns([1, 1])
+
 with col_hist:
     st.subheader("Historia rozmowy")
+
 with col_btn:
     if st.button("🧹 Wyczyść historię"):
         st.session_state[klucz_historia] = [{"role": "system", "content": prompt_systemowy}]
         st.success("Historia została wyczyszczona.")
 
-for msg in st.session_state[klucz_historia]:
+# 🔄 Wyświetlanie historii od najnowszych do najstarszych
+for msg in reversed(st.session_state[klucz_historia]):
     if msg["role"] == "user":
-        st.markdown(f"**Ty:** {msg['content']}")
+        st.markdown("**Ty:** " + msg["content"])
     elif msg["role"] == "assistant":
-        st.markdown(f"**Asystent:** {msg['content']}")
+        st.markdown("**Asystent:** " + msg["content"])
+    st.markdown("---")
 
 # === 6. OVERLAY KOSZTOWY (PRAWY GÓRNY RÓG) ===
 if "koszt" in st.session_state:
