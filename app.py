@@ -52,6 +52,9 @@ else:
 with col2:
     st.markdown("**Max tokens**")
     st.caption(f"🎯 Aktualnie: {st.session_state[klucz_tokeny]}")
+    max_free = st.session_state.get(f"max_free_tokens_{model_alias}")
+    if max_free:
+        st.caption(f"🆓 Max Free Tokens: {max_free}")
 
 with col3:
     limit_tokenow = MAKSYMALNE_TOKENS.get(model_alias, 4096)
@@ -69,10 +72,14 @@ with col4:
     if st.button("🔄 Nowa sesja"):
         st.session_state[klucz_tokeny] = nowa_liczba
         st.session_state[klucz_historia] = [{"role": "system", "content": prompt_systemowy}]
+        st.session_state.pop(f"max_free_tokens_{model_alias}", None)
         st.success(f"Nowa sesja rozpoczęta z max_tokens = {nowa_liczba}")
 
-# === 4. FORMULARZ ZAPYTANIA I OBSŁUGA API ===
+# === 4. SEKCJA IV – FORMULARZ ZAPYTANIA I OBSŁUGA API ===
+
+# === 4.1. FORMULARZ – wejście i layout ===
 col_prompt, col_send = st.columns([5, 1])
+klucz_koszt = f"koszt_{model_alias}"
 
 with col_prompt:
     prompt = st.text_area(
@@ -81,6 +88,7 @@ with col_prompt:
         label_visibility="collapsed"
     )
 
+# === 4.2. OBSŁUGA PRZYCISKU „Wyślij” ===
 with col_send:
     if st.button("Wyślij"):
         if prompt.strip():
@@ -96,29 +104,64 @@ with col_send:
             response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=data)
             response_data = response.json()
 
-            if "choices" in response_data and "message" in response_data["choices"][0]:
-                reply = response_data["choices"][0]["message"]["content"]
+            # === 4.3. OBSŁUGA POPRAWNEJ ODPOWIEDZI ===
+            if response.ok and "choices" in response_data:
+                choice = response_data["choices"][0]
+                if "message" in choice:
+                    reply = choice["message"]["content"]
+                elif "text" in choice:
+                    reply = choice["text"]
+                else:
+                    reply = "[⚠️ Brak treści odpowiedzi]"
+
                 st.session_state[klucz_historia].append({"role": "assistant", "content": reply})
-            elif "choices" in response_data and "text" in response_data["choices"][0]:
-                reply = response_data["choices"][0]["text"]
-                st.session_state[klucz_historia].append({"role": "assistant", "content": reply})
+
+                # === 4.3.1. LICZENIE KOSZTÓW ===
+                if "usage" in response_data:
+                    try:
+                        tokens = response_data["usage"]["total_tokens"]
+                        ceny = {
+                            "openai/gpt-3.5-turbo": 0.001,
+                            "openai/gpt-4-turbo": 0.01,
+                            "anthropic/claude-3-sonnet": 0.003,
+                            "anthropic/claude-3-opus": 0.015,
+                            "mistralai/mistral-7b-instruct": 0.0005,
+                            "meta-llama/llama-3-8b-instruct": 0.0005
+                        }
+                        cena_tokena = ceny.get(model_alias, 0.001)
+                        koszt = tokens * cena_tokena / 1000
+                        st.session_state[klucz_koszt] = f"💲 Zużyto {tokens} tokenów • Koszt: ${koszt:.4f}"
+                    except Exception as e:
+                        st.session_state[klucz_koszt] = f"❌ Nie udało się policzyć kosztu: {e}"
+                else:
+                    st.session_state[klucz_koszt] = "⚠️ Model nie zwrócił liczby tokenów."
+
+            # === 4.4. OBSŁUGA BŁĘDU 402 (brak kredytów) ===
+            elif "error" in response_data and "can only afford" in response_data["error"].get("message", ""):
+                msg = response_data["error"]["message"]
+                st.error("❌ Masz za mało kredytów lub ustawiłeś zbyt duży limit `max_tokens`.")
+                st.caption("💡 Zmniejsz suwak lub doładuj konto: [OpenRouter.ai – Settings](https://openrouter.ai/settings/credits)")
+
+                import re
+                match = re.search(r"can only afford (\d+)", msg)
+                if match:
+                    dozwolone = int(match.group(1))
+                    st.session_state[klucz_tokeny] = dozwolone
+                    st.session_state[f"max_free_tokens_{model_alias}"] = dozwolone
+                    st.session_state[klucz_koszt] = f"⚠️ Limit `max_tokens` został zmniejszony do {dozwolone}."
+                    st.rerun()
+                else:
+                    st.session_state[klucz_koszt] = "⚠️ Nie udało się odczytać dopuszczalnego limitu tokenów."
+
+            # === 4.5. OBSŁUGA INNYCH BŁĘDÓW ===
             else:
                 st.error("Nieoczekiwana odpowiedź od modelu:")
                 st.code(response_data)
+                st.session_state[klucz_koszt] = "⚠️ Błąd odpowiedzi – nie można obliczyć kosztu."
 
-            if "usage" in response_data:
-                tokens = response_data["usage"]["total_tokens"]
-                ceny = {
-                    "openai/gpt-3.5-turbo": 0.001,
-                    "openai/gpt-4-turbo": 0.01,
-                    "anthropic/claude-3-sonnet": 0.003,
-                    "anthropic/claude-3-opus": 0.015,
-                    "mistralai/mistral-7b-instruct": 0.0005,
-                    "meta-llama/llama-3-8b-instruct": 0.0005
-                }
-                cena_tokena = ceny.get(model_alias, 0.001)
-                koszt = tokens * cena_tokena / 1000
-                st.session_state["koszt"] = f"Zużyto {tokens} tokenów • Koszt: ${koszt:.4f}"
+# === 4.6. WYŚWIETLENIE KOSZTU POD PRZYCISKIEM ===
+if klucz_koszt in st.session_state:
+    st.caption(st.session_state[klucz_koszt])
 
 # === 5. WIDOK HISTORII ROZMOWY ===
 st.markdown("---")
