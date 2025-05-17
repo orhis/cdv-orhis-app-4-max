@@ -4,10 +4,10 @@ import requests
 st.set_page_config(page_title="B.O. Zastosowanie sztucznych sieci neuronowych", layout="centered")
 st.title("B.O. Zastosowanie sztucznych sieci neuronowych")
 
-# 🔐 Klucz API z secrets (działa lokalnie z secrets.toml i w Streamlit Cloud)
+# 🔐 Klucz API z secrets
 api_key = st.secrets["OPENROUTER_API_KEY"]
 
-# 📦 Lista modeli OpenRouter
+# 📦 Lista modeli dostępnych w OpenRouter
 MODELE = {
     "GPT-3.5 Turbo": "openai/gpt-3.5-turbo",
     "GPT-4 Turbo": "openai/gpt-4-turbo",
@@ -21,7 +21,7 @@ MODELE = {
 nazwa_modelu = st.selectbox("Wybierz model:", list(MODELE.keys()))
 model_alias = MODELE[nazwa_modelu]
 
-# 🎭 Wybór stylu odpowiedzi
+# 🎭 Styl odpowiedzi
 styl = st.radio("Styl odpowiedzi:", ["Precyzyjny", "Kreatywny"])
 
 # 🧠 Prompt systemowy zależny od stylu
@@ -30,14 +30,16 @@ if styl == "Precyzyjny":
 else:
     prompt_systemowy = "Odpowiadasz kreatywnie, z humorem i wyobraźnią – jak inspirujący doradca."
 
-# 🧠 Klucz sesji dla danego modelu
+# 🧠 Klucz do historii i suwaka tokenów dla danego modelu
 klucz_historia = f"messages_{model_alias}"
+klucz_tokeny = f"max_tokens_{model_alias}"
 
-# 📥 Inicjalizacja historii dla tego modelu
+# 📥 Inicjalizacja historii i tokenów dla danego modelu
 if klucz_historia not in st.session_state:
-    st.session_state[klucz_historia] = [
-        {"role": "system", "content": prompt_systemowy}
-    ]
+    st.session_state[klucz_historia] = [{"role": "system", "content": prompt_systemowy}]
+
+if klucz_tokeny not in st.session_state:
+    st.session_state[klucz_tokeny] = 1024  # domyślny limit tokenów
 
 # 📝 Pole tekstowe na zapytanie
 prompt = st.text_area("Wprowadź swoje polecenie:", "")
@@ -55,7 +57,7 @@ if st.button("Wyślij"):
         data = {
             "model": model_alias,
             "messages": st.session_state[klucz_historia],
-            "max_tokens": 1024
+            "max_tokens": st.session_state[klucz_tokeny]
         }
 
         response = requests.post(
@@ -76,12 +78,44 @@ if st.button("Wyślij"):
             st.error("Nieoczekiwana odpowiedź od modelu:")
             st.code(response_data)
 
-# 📚 Wyświetlenie historii rozmowy dla wybranego modelu
+        # 📊 Licznik tokenów i kosztów
+        if "usage" in response_data:
+            tokens = response_data["usage"]["total_tokens"]
+
+            ceny = {
+                "openai/gpt-3.5-turbo": 0.001,
+                "openai/gpt-4-turbo": 0.01,
+                "anthropic/claude-3-sonnet": 0.003,
+                "anthropic/claude-3-opus": 0.015,
+                "mistralai/mistral-7b-instruct": 0.0005,
+                "meta-llama/llama-3-8b-instruct": 0.0005
+            }
+
+            cena_tokena = ceny.get(model_alias, 0.001)
+            koszt = tokens * cena_tokena / 1000
+            st.info(f"Zużyto {tokens} tokenów. Szacowany koszt: ${koszt:.4f}")
+
+# 🧼 Suwak max_tokens dla danego modelu (nad historią)
 st.markdown("---")
 st.subheader("Historia rozmowy")
 
+st.session_state[klucz_tokeny] = st.slider(
+    "Maksymalna długość odpowiedzi (tokeny):",
+    min_value=128,
+    max_value=4096,
+    value=st.session_state[klucz_tokeny],
+    step=64,
+    key=klucz_tokeny
+)
+
+# 📚 Wyświetlenie historii rozmowy
 for msg in st.session_state[klucz_historia]:
     if msg["role"] == "user":
         st.markdown(f"**Ty:** {msg['content']}")
     elif msg["role"] == "assistant":
         st.markdown(f"**Asystent:** {msg['content']}")
+
+# 🔘 Przycisk czyszczenia historii dla danego modelu
+if st.button("🧹 Wyczyść historię tego modelu"):
+    st.session_state[klucz_historia] = [{"role": "system", "content": prompt_systemowy}]
+    st.success("Historia została wyczyszczona.")
